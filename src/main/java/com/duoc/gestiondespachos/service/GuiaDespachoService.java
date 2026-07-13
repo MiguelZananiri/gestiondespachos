@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
@@ -68,11 +70,12 @@ public class GuiaDespachoService {
         Path rutaArchivo = guiaArchivoService.generarArchivoPdfEnEfs(guiaGuardada);
         guiaGuardada.setRutaTemporalEfs(rutaArchivo.toString());
 
-        GuiaDespacho guiaActualizada = guiaDespachoRepository.save(guiaGuardada);
+        GuiaDespacho guiaActualizada =
+                guiaDespachoRepository.save(guiaGuardada);
 
-        // Enviar a RabbitMQ después del guardado definitivo
-        guiaRabbitProducer.enviarGuia(guiaActualizada);
+        GuiaDespacho guiaFinal = guiaActualizada;
 
+        // En EC2/RDS, subir automáticamente el PDF generado a S3.
         if (autoUploadS3) {
 
             guiaS3Service.subirGuiaAS3(guiaActualizada.getId());
@@ -83,7 +86,7 @@ public class GuiaDespachoService {
         // Publicar en RabbitMQ la versión definitiva de la guía.
         guiaRabbitProducer.enviarGuia(guiaFinal);
 
-        return convertirAResponseDTO(guiaActualizada);
+        return convertirAResponseDTO(guiaFinal);
     }
 
     @Transactional
@@ -203,4 +206,5 @@ public class GuiaDespachoService {
 
         return historialDTO;
     }
+}
 }
