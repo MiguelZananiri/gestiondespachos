@@ -24,15 +24,21 @@ public class GuiaDespachoService {
     private final GuiaDespachoRepository guiaDespachoRepository;
     private final GuiaArchivoService guiaArchivoService;
     private final GuiaRabbitProducer guiaRabbitProducer;
+    private final GuiaS3Service guiaS3Service;
+    private final boolean autoUploadS3;
 
     public GuiaDespachoService(
             GuiaDespachoRepository guiaDespachoRepository,
             GuiaArchivoService guiaArchivoService,
-            GuiaRabbitProducer guiaRabbitProducer) {
+            GuiaRabbitProducer guiaRabbitProducer,
+            GuiaS3Service guiaS3Service,
+            @Value("${app.s3.auto-upload:false}") boolean autoUploadS3) {
 
         this.guiaDespachoRepository = guiaDespachoRepository;
         this.guiaArchivoService = guiaArchivoService;
         this.guiaRabbitProducer = guiaRabbitProducer;
+        this.guiaS3Service = guiaS3Service;
+        this.autoUploadS3 = autoUploadS3;
     }
 
     @Transactional
@@ -66,6 +72,16 @@ public class GuiaDespachoService {
 
         // Enviar a RabbitMQ después del guardado definitivo
         guiaRabbitProducer.enviarGuia(guiaActualizada);
+
+        if (autoUploadS3) {
+
+            guiaS3Service.subirGuiaAS3(guiaActualizada.getId());
+
+            guiaFinal = buscarEntidadPorId(guiaActualizada.getId());
+        }
+
+        // Publicar en RabbitMQ la versión definitiva de la guía.
+        guiaRabbitProducer.enviarGuia(guiaFinal);
 
         return convertirAResponseDTO(guiaActualizada);
     }
