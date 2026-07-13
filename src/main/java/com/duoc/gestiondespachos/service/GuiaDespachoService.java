@@ -34,7 +34,7 @@ public class GuiaDespachoService {
             GuiaArchivoService guiaArchivoService,
             GuiaRabbitProducer guiaRabbitProducer,
             GuiaS3Service guiaS3Service,
-            @Value("${app.s3.auto-upload:false}") boolean autoUploadS3) {
+            @Value("${app.s3.auto-upload:true}") boolean autoUploadS3) {
 
         this.guiaDespachoRepository = guiaDespachoRepository;
         this.guiaArchivoService = guiaArchivoService;
